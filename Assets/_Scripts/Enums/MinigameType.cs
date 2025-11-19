@@ -5,5 +5,6 @@ public enum MinigameType
     None,
     Tutorial,
     Darkness,
-    Tightrope
+    Tightrope,
+    Spider
 }

@@ -35,6 +35,7 @@ public class MinigameManager : MonoBehaviour
     [Header("Minigame Prefabs")]
     public GameObject darknessMinigame;
     public GameObject tightRopeMinigame;
+    public GameObject spiderMinigame;
 
 
     bool managersFound = false;
@@ -142,6 +143,8 @@ public class MinigameManager : MonoBehaviour
                 return darknessMinigame;
             case MinigameType.Tightrope:
                 return tightRopeMinigame;
+            case MinigameType.Spider:
+                return spiderMinigame;
             default:
                 break;
         }

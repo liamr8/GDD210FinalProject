@@ -379,6 +379,7 @@ MonoBehaviour:
   maxLives: 3
   darknessMinigame: {fileID: 1415998381051588050, guid: 3d5ec01ba1f87ff4bac0fb21cd3ec22f, type: 3}
   tightRopeMinigame: {fileID: 7997076376827610275, guid: caa347d79b2708b46932b068b2e8e903, type: 3}
+  spiderMinigame: {fileID: 7997076376827610275, guid: 5e1d0f12dba73fb4bab1ff5dd5300e5d, type: 3}
 --- !u!4 &300980627
 Transform:
   m_ObjectHideFlags: 0
