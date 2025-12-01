@@ -4,6 +4,7 @@ using System;
 using System.Threading;
 using UnityEngine.SceneManagement;
 using TMPro;
+using System.Runtime;
 
 public class MinigameManager : MonoBehaviour
 {
@@ -11,12 +12,28 @@ public class MinigameManager : MonoBehaviour
     public MinigameType nextMinigame;
 
     public Transform minigameParent;
+    public Transform transitionScreenParent;
  
     public TextMeshProUGUI scoreText;
     public TextMeshProUGUI timerText;
     public Transform playerLivesDisplay;
     public Sprite heartFull, heartEmpty;
     
+    public delegate void OnTransition();
+    public static event OnTransition OnMinigameWon;
+    public static event OnTransition OnMinigameLost;
+    public void ManageMinigameWon()
+    {
+        //if(currentActiveMinigame == MinigameType.None)
+        timerToTransition = 0;
+        GameManager.Instance.UpdateGameState(GameState.MinigameTransition);
+
+    }
+    public void ManageMinigameLost()
+    {
+        timerToTransition = 0;
+        GameManager.Instance.UpdateGameState(GameState.MinigameTransition);
+    }
     
 
     [SerializeField] float miniGameTransitionTimer = 0;
@@ -24,8 +41,9 @@ public class MinigameManager : MonoBehaviour
     [SerializeField] Quaternion startingGyroRotation;
 
     [Header("Timers")]
-    float timerToTransition = 0;
-    float timeInBedroomScene;
+    [SerializeField] float timerToTransition = 0;
+    [SerializeField]float timeInBedroomScene;
+    [SerializeField]float timeTransitioningMinigame;
 
     [Header("Saved Player Data")]
     [SerializeField]int score = 0;
@@ -37,6 +55,15 @@ public class MinigameManager : MonoBehaviour
     public GameObject tightRopeMinigame;
     public GameObject spiderMinigame;
 
+    [Header("ScreenTransition Settings")]
+    public Animator bedroomTransitionAnimator;
+    public Animator screenTransitionAnimator;
+    [Header("ScreenTransition Prefabs")]
+    public GameObject menuToGame;
+    public GameObject minigameToNightTerror;
+    public GameObject minigameToSurvived;
+    public GameObject toLost;
+    public GameObject toWon;
 
     bool managersFound = false;
 
@@ -57,6 +84,10 @@ public class MinigameManager : MonoBehaviour
         ResetGyro();
 
         GameManager.Instance.RegisterService(this);
+        OnMinigameWon += ManageMinigameWon;
+        OnMinigameLost += ManageMinigameLost;
+        if(transitionScreenParent.childCount > 0)
+            screenTransitionAnimator = transitionScreenParent.GetChild(0).GetComponent<Animator>();
         ManageServices();
         if(managersFound)
         {
@@ -74,17 +105,39 @@ public class MinigameManager : MonoBehaviour
 
         if (IsPlayerAlive())
         {
+            if(transitionScreenParent.childCount > 0)
+            {
+                screenTransitionAnimator = transitionScreenParent.GetChild(0).GetComponent<Animator>();
+            }
+                    
+
             if (!(minigameParent.childCount > 0))
             {
-                minigameParent.gameObject.SetActive(false);
-                if (miniGameTransitionTimer > 3)
+                if (!bedroomTransitionAnimator.GetBool("AnimationTriggered"))
                 {
-
+                    bedroomTransitionAnimator.SetBool("AnimationTriggered", true);
+                    bedroomTransitionAnimator.Play("BedroomShrug", 0, 0f);
+                    bedroomTransitionAnimator.Update(0f);
+                }
+                
+                    
+                minigameParent.gameObject.SetActive(false);
+                if (miniGameTransitionTimer > 3 && IsScreenTransitionFinished())
+                {
                     PickNewRandomMinigame();
                     ChangeCurrentMinigame();
+                    bedroomTransitionAnimator.SetBool("AnimationTriggered", false);
                 }
-                miniGameTransitionTimer += Time.deltaTime;
+                ManageTransitions();
+                    
             }
+            
+            if(IsScreenTransitionFinished() && screenTransitionAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime >= 1f)
+                {
+                    Destroy(transitionScreenParent.GetChild(0).gameObject);
+                    Debug.LogError("attempt to destroy transition");
+            }
+
         }
         else
         {
@@ -96,7 +149,25 @@ public class MinigameManager : MonoBehaviour
         }
         UpdateBedroomStats();
     }
+    public void ManageTransitions()
+    {
+        if(timerToTransition > timeTransitioningMinigame || nextMinigame == MinigameType.None) //added else
+        {
+            if(!(transitionScreenParent.childCount > 0) && miniGameTransitionTimer > 2.8f) //magic num 2.8f
+            {
+                GameObject newTransitionScreen = Instantiate(GetTransitionScreenPrefab(TransitionScreenType.Won), transitionScreenParent);
+            }
 
+            miniGameTransitionTimer += Time.deltaTime;
+        }
+        if(GameManager.Instance.CurrentState == GameState.MinigameTransition)
+            timerToTransition += Time.deltaTime;
+
+    }
+    public float GetAdjustedLength(AnimationClip clip, Animator animator, float stateSpeed)
+    {
+        return clip.length / (stateSpeed * animator.speed);
+    }
     public void PickNewRandomMinigame()
     {
         Array minigameTypes = MinigameType.GetValues(typeof(MinigameType));
@@ -110,7 +181,16 @@ public class MinigameManager : MonoBehaviour
 
 
     Coroutine ChangingMinigameCoroutine = null;
-
+    public bool IsScreenTransitionFinished()
+    {
+        if(screenTransitionAnimator != null)
+        {
+            Debug.LogWarning(screenTransitionAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime);
+        }
+        return screenTransitionAnimator != null &&
+                        transitionScreenParent.childCount > 0 &&
+                        screenTransitionAnimator.GetCurrentAnimatorStateInfo(0).IsTag("Last");
+    }
     public void ChangeCurrentMinigame()
     {
         Debug.LogError("ChangingMinigameCoroutine is null: " + ChangingMinigameCoroutine == null);
@@ -123,13 +203,34 @@ public class MinigameManager : MonoBehaviour
         nextMinigame = MinigameType.None;
         yield return new WaitUntil(() => GetMinigamePrefab(currentActiveMinigame) != null);
         miniGameTransitionTimer = 0;
+        GameManager.Instance.UpdateGameState(GameState.Minigame);
         GameObject newMinigame = Instantiate(GetMinigamePrefab(currentActiveMinigame), minigameParent);
         newMinigame.transform.SetSiblingIndex(0);
+        
         minigameParent.gameObject.SetActive(true);
         ChangingMinigameCoroutine = null;
     }
 
 
+
+    private GameObject GetTransitionScreenPrefab(TransitionScreenType screenType)
+    {
+        switch(screenType)
+        {
+            case TransitionScreenType.None:
+                return null;
+            case TransitionScreenType.NightTerror:
+                return minigameToNightTerror;
+            case TransitionScreenType.Survived:
+                return minigameToSurvived;
+            case TransitionScreenType.Lost:
+                return toLost;
+            case TransitionScreenType.Won:
+                return toWon;
+            default:
+                return null;
+        }
+    }
 
     private GameObject GetMinigamePrefab(MinigameType minigame)
     {
@@ -160,8 +261,14 @@ public class MinigameManager : MonoBehaviour
         return new Quaternion(q.x, q.y, -q.z, -q.w);
     }
 
-    public void PlayerWinMinigame(){ score++; }
-    public void PlayerLoseMinigame(){ lives--; }
+    public void PlayerWinMinigame(){
+        OnMinigameWon.Invoke();
+        score++;
+    }
+    public void PlayerLoseMinigame(){ 
+        OnMinigameLost.Invoke();
+        lives--;
+    }
 
     bool IsPlayerAlive()
     {

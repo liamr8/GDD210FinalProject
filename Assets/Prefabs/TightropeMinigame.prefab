@@ -205,7 +205,7 @@ MonoBehaviour:
   losingBalanceTimer: 0
   losingBalanceTimerLimit: 3
   winTimer: 0
-  winTimerThreshold: 12
+  winTimerThreshold: 9
   timerText: {fileID: 4334952794252867818}
   tiltPowerMultiplier: 1.27
   tiltValue: 0
