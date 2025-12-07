@@ -17,6 +17,7 @@ public class DarknessMinigame : MonoBehaviour
     private bool isSwiping;
     ///////////////////////////////////
     public RectTransform matchStick, matchBox;
+    public Image playerHandMatchImage, playerHandMatchFlameImage;
     public RectTransform matchStickTip, matchBoxStrikerStrip;
 
     public EventSystem uiEventSystem;
@@ -66,7 +67,10 @@ public class DarknessMinigame : MonoBehaviour
         }
         ParticleSystem ps = matchStickTip.transform.GetComponent<ParticleSystem>();
         var psEmission = ps.emission;
-        psEmission.rateOverTime = Mathf.Lerp(0, 45f, Mathf.InverseLerp(0, minimumValidMatchStrikeValue, currentMatchStrikeValue));
+        if(IsPlayerTouchingMatchStick() || isTouchingMatch && Input.GetTouch(0).phase == TouchPhase.Moved){
+            psEmission.rateOverTime = Mathf.Lerp(0, 45f, Mathf.InverseLerp(0, minimumValidMatchStrikeValue, currentMatchStrikeValue));
+            psEmission.rateOverDistance = Mathf.Lerp(0, 3f, Mathf.InverseLerp(0, minimumValidMatchStrikeValue, currentMatchStrikeValue));
+        }
         /*testText.text = currentNumberOfValidMatchStrikes.ToString()  + "\n" + currentMatchStrikeValue.ToString() +
          "\n" + IsMatchTipIsTouchingStrikerStrip() + "\n" + Mathf.Abs(touchDelta.magnitude).ToString()
          + "\n" + Mathf.Clamp(GetDotProductOfMatchAndStrikerStrip(),0,1).ToString();*/
@@ -271,14 +275,9 @@ public class DarknessMinigame : MonoBehaviour
     void WinGame()
     {
         minigameEndStateDebounce = true;
+        playerHandMatchFlameImage.enabled = true;
         Debug.LogWarning("player won");
         minigameEndSequence ??= StartCoroutine(WinGameCoroutine());
-    }
-    System.Collections.IEnumerator WinGameCoroutine()
-    {
-        yield return new WaitForSeconds(3);
-        GameManager.Instance.GetService<MinigameManager>().PlayerWinMinigame();
-        Destroy(transform.parent.gameObject);
     }
     void LoseGame()
     {
@@ -286,10 +285,21 @@ public class DarknessMinigame : MonoBehaviour
         Debug.LogError("player lost");
         minigameEndSequence ??= StartCoroutine(LoseGameCoroutine());
     }
+    System.Collections.IEnumerator WinGameCoroutine()
+    {
+        MinigameManager mm = GameManager.Instance.GetService<MinigameManager>();
+        yield return new WaitForSeconds(3);
+        mm.PlayerWinMinigame();
+        yield return new WaitUntil(() => mm.IsScreenTransitionFinished());
+        Destroy(transform.parent.gameObject);
+    }
+    
     System.Collections.IEnumerator LoseGameCoroutine()
     {
+        MinigameManager mm = GameManager.Instance.GetService<MinigameManager>();
         yield return new WaitForSeconds(3);
-        GameManager.Instance.GetService<MinigameManager>().PlayerLoseMinigame();
+        mm.PlayerLoseMinigame();
+        yield return new WaitUntil(() => mm.IsScreenTransitionFinished());
         Destroy(transform.parent.gameObject);
     }
     void AdvanceTimers()

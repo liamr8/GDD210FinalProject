@@ -7,6 +7,7 @@ using UnityEngine;
 public class SpiderMinigame : MonoBehaviour
 {
     public RectTransform spiderBook;
+    public RectTransform spiderBookParent;
     public RectTransform spiderLocalParticleTransform;
     public RectTransform spiderWorldSpaceParticleTransform;
 
@@ -30,9 +31,14 @@ public class SpiderMinigame : MonoBehaviour
     [SerializeField] float shakeCooldownTimer = 0;
     [SerializeField] float shakeCooldownTimerLimit;
     [SerializeField] Vector2 shakeVector;
+    [SerializeField] float visibleBookShakeMultiplier;
 
     ParticleSystem localPs;
     ParticleSystem worldSpacePs;
+
+    Vector2 originalBookParentLocalPosition;
+
+    bool minigameEndStateDebounce = false;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -41,23 +47,26 @@ public class SpiderMinigame : MonoBehaviour
         worldSpacePs = spiderWorldSpaceParticleTransform.GetComponent<ParticleSystem>();
         numberOfSpiders = localPs.main.maxParticles;
         originalNumberOfSpiders = numberOfSpiders;
+        originalBookParentLocalPosition = spiderBookParent.localPosition;
     }
 
     // Update is called once per frame
     void Update()
     {
         Debug.LogWarning(Screen.orientation);
-        GetPlayerInput();
-        ShakeBook();
-        //ApplySpiderGravity();
-        if (lossTimer > lossTimerLimit)
-            LoseGame();
-        else if (numberOfSpiders <= 0)
-        {
-            WinGame();
-            return;
+        if(!minigameEndStateDebounce) {
+            GetPlayerInput();
+            ShakeBook();
+            //ApplySpiderGravity();
+            if (lossTimer > lossTimerLimit)
+                LoseGame();
+            else if (numberOfSpiders <= 0)
+            {
+                WinGame();
+                return;
+            }
+            AdvanceTimers();
         }
-        AdvanceTimers();
         timerText.text = "SHAKE\n" + (lossTimerLimit - lossTimer).ToString();
 
     }
@@ -78,6 +87,10 @@ public class SpiderMinigame : MonoBehaviour
     bool particlesLoaded = false;
 
     [SerializeField] float spiderLaunchMaxAngle = 30f;
+    Vector2 FilterDeadZone(Vector2 v, float threshold)
+    {
+        return v.sqrMagnitude < threshold * threshold ? Vector3.zero : v;
+    }
     private void ShakeBook()
     {
 
@@ -96,56 +109,62 @@ public class SpiderMinigame : MonoBehaviour
         else if(!particlesLoaded)
             return;
 
-
-        if (numberOfSpiders > 0
-        && shakeCooldownTimer > shakeCooldownTimerLimit
-        && shakeVector.magnitude * shakePowerMultiplier > shakePowerSuccessThreshold)
+        if(numberOfSpiders > 0)
         {
-            amountOfSpidersToAffect = Mathf.Clamp(UnityEngine.Random.Range(amountOfSpidersToAffectMin, amountOfSpidersToAffectMax + 1), 0, numberOfSpiders);
-
-            shakeCooldownTimer = 0;
-
-            int startIndex = originalNumberOfSpiders - numberOfSpiders;
-            int endIndex = startIndex + amountOfSpidersToAffect;
-            endIndex = amountOfSpidersToAffect;
-            endIndex = Mathf.Clamp(endIndex, 0, particleCount); //to prevent OutOfBoundsException
-            for (int i = 0; i < endIndex; i++)
+            //visibly shaking book according to shake vector
+            spiderBookParent.localPosition = originalBookParentLocalPosition + FilterDeadZone(shakeVector, 0.03f) * visibleBookShakeMultiplier;
+            
+            if(shakeCooldownTimer > shakeCooldownTimerLimit 
+            && shakeVector.magnitude * shakePowerMultiplier > shakePowerSuccessThreshold)
             {
-                // 1) Local position on the book system
-                Vector3 localPos = particles[i].position;
-                Debug.Log("particle local pos"+ i+" "+localPos);
+                amountOfSpidersToAffect = Mathf.Clamp(UnityEngine.Random.Range(amountOfSpidersToAffectMin, amountOfSpidersToAffectMax + 1), 0, numberOfSpiders);
 
-                // 2) Convert to world position
-                Vector3 worldPos = localPs.transform.TransformPoint(localPos);
-                Debug.Log("particle world pos" + i + " " + worldPos);
-                // 3) Launch velocity based on shake
+                shakeCooldownTimer = 0;
 
-                // Random angle around Z (2D screen)
-                float angle = UnityEngine.Random.Range(-spiderLaunchMaxAngle, spiderLaunchMaxAngle);
-                Quaternion rot = Quaternion.AngleAxis(angle, Vector3.forward);
+                int startIndex = originalNumberOfSpiders - numberOfSpiders;
+                int endIndex = startIndex + amountOfSpidersToAffect;
 
-                Vector3 variedDir = rot * shakeVector.normalized;
+                endIndex = amountOfSpidersToAffect;
+                endIndex = Mathf.Clamp(endIndex, 0, particleCount); //to prevent OutOfBoundsException
 
-                // Optional: small random speed variation
-                float speedJitter = UnityEngine.Random.Range(0.8f, 1.2f);
+                for (int i = 0; i < endIndex; i++)
+                {
+                    // 1) Local position on the book system
+                    Vector3 localPos = particles[i].position;
+                    Debug.Log("particle local pos"+ i+" "+localPos);
 
-                Vector3 launchVelocity = variedDir * speedJitter * shakePowerMultiplier;
+                    // 2) Convert to world position
+                    Vector3 worldPos = localPs.transform.TransformPoint(localPos);
+                    Debug.Log("particle world pos" + i + " " + worldPos);
+                    // 3) Launch velocity based on shake
 
-                // 4) Emit a matching spider into the falling system
-                var emitParams = new ParticleSystem.EmitParams();
-                emitParams.position = worldPos;
-                emitParams.velocity = launchVelocity;
-                emitParams.startSize = particles[i].GetCurrentSize(localPs);
-                emitParams.startColor = particles[i].GetCurrentColor(localPs);
+                    // Random angle around Z (2D screen)
+                    float angle = UnityEngine.Random.Range(-spiderLaunchMaxAngle, spiderLaunchMaxAngle);
+                    Quaternion rot = Quaternion.AngleAxis(angle, Vector3.forward);
 
-                worldSpacePs.Emit(emitParams, 1);
+                    Vector3 variedDir = rot * shakeVector.normalized;
 
-                // 5) Kill this spider in the book system
-                particles[i].remainingLifetime = 0f;
+                    // Optional: small random speed variation
+                    float speedJitter = UnityEngine.Random.Range(0.8f, 1.2f);
 
+                    Vector3 launchVelocity = variedDir * speedJitter * shakePowerMultiplier;
+
+                    // 4) Emit a matching spider into the falling system
+                    var emitParams = new ParticleSystem.EmitParams();
+                    emitParams.position = worldPos;
+                    emitParams.velocity = launchVelocity;
+                    emitParams.startSize = particles[i].GetCurrentSize(localPs);
+                    emitParams.startColor = particles[i].GetCurrentColor(localPs);
+
+                    worldSpacePs.Emit(emitParams, 1);
+
+                    // 5) Kill this spider in the book system
+                    particles[i].remainingLifetime = 0f;
+
+                }
+                numberOfSpiders = particleCount;  // i paranoid
+                localPs.SetParticles(particles, particleCount);
             }
-            numberOfSpiders = particleCount;  // i paranoid
-            localPs.SetParticles(particles, particleCount);
         }
     }
 
@@ -171,24 +190,34 @@ public class SpiderMinigame : MonoBehaviour
     Coroutine minigameEndSequence = null;
     void WinGame()
     {
+        minigameEndStateDebounce = true;
         Debug.LogWarning("player won");
         minigameEndSequence ??= StartCoroutine(WinGameCoroutine());
     }
-    IEnumerator WinGameCoroutine()
-    {
-        yield return new WaitForSeconds(3);
-        GameManager.Instance.GetService<MinigameManager>().PlayerWinMinigame();
-        Destroy(transform.parent.gameObject);
-    }
+    
     void LoseGame()
     {
+        minigameEndStateDebounce = true;
         Debug.LogError("player lost");
         minigameEndSequence ??= StartCoroutine(LoseGameCoroutine());
     }
-    IEnumerator LoseGameCoroutine()
+    
+    System.Collections.IEnumerator WinGameCoroutine()
     {
+        MinigameManager mm = GameManager.Instance.GetService<MinigameManager>();
         yield return new WaitForSeconds(3);
-        GameManager.Instance.GetService<MinigameManager>().PlayerLoseMinigame();
+        mm.PlayerWinMinigame();
+        yield return new WaitUntil(() => mm.IsScreenTransitionFinished());
+        Destroy(transform.parent.gameObject);
+    }
+    
+    System.Collections.IEnumerator LoseGameCoroutine()
+    {
+        MinigameManager mm = GameManager.Instance.GetService<MinigameManager>();
+        yield return new WaitForSeconds(3);
+        mm.PlayerLoseMinigame();
+        yield return new WaitUntil(() => mm.IsScreenTransitionFinished());
+        Debug.LogError("screen transition finished: "+ mm.IsScreenTransitionFinished());
         Destroy(transform.parent.gameObject);
     }
     void AdvanceTimers()

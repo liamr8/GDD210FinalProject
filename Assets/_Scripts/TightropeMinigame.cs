@@ -25,6 +25,8 @@ public class TightropeMinigame : MonoBehaviour
 
     public float rotationThresholdToLose;
 
+    bool minigameEndStateDebounce = false;
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -35,18 +37,20 @@ public class TightropeMinigame : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        GetPlayerInput();
-        TiltPlayer(tiltValue);
-        if(losingBalanceTimer > losingBalanceTimerLimit)
-           NudgePlayerInDirection();
-        if (!IsPlayerBalancedOnRope())
-            LoseGame();
-        else if (winTimer > winTimerThreshold)
-        {
-            WinGame();
-            return;
+        if(!minigameEndStateDebounce) {
+            GetPlayerInput();
+            TiltPlayer(tiltValue);
+            if(losingBalanceTimer > losingBalanceTimerLimit)
+            NudgePlayerInDirection();
+            if (!IsPlayerBalancedOnRope())
+                LoseGame();
+            else if (winTimer > winTimerThreshold)
+            {
+                WinGame();
+                return;
+            }
+            AdvanceTimers();
         }
-        AdvanceTimers();
         timerText.text = "BALANCE\n"+(winTimerThreshold - winTimer).ToString();
     
     }
@@ -83,27 +87,46 @@ public class TightropeMinigame : MonoBehaviour
         return !(Mathf.Abs(playerCharacter.localRotation.z) > rotationThresholdToLose);
     }
 
+
     Coroutine minigameEndSequence = null;
     void WinGame()
     {
+        minigameEndStateDebounce = true;
         Debug.LogWarning("player won");
         minigameEndSequence ??= StartCoroutine(WinGameCoroutine());
     }
-    IEnumerator WinGameCoroutine()
-    {
-        yield return new WaitForSeconds(3);
-        GameManager.Instance.GetService<MinigameManager>().PlayerWinMinigame();
-        Destroy(transform.parent.gameObject);
-    }
+    
     void LoseGame()
     {
+        minigameEndStateDebounce = true;
         Debug.LogError("player lost");
         minigameEndSequence ??= StartCoroutine(LoseGameCoroutine());
     }
-    IEnumerator LoseGameCoroutine()
+    System.Collections.IEnumerator WinGameCoroutine()
     {
+        MinigameManager mm = GameManager.Instance.GetService<MinigameManager>();
         yield return new WaitForSeconds(3);
-        GameManager.Instance.GetService<MinigameManager>().PlayerLoseMinigame();
+        mm.PlayerWinMinigame();
+        yield return new WaitUntil(() => mm.IsScreenTransitionFinished());
+        Destroy(transform.parent.gameObject);
+    }
+    
+    System.Collections.IEnumerator LoseGameCoroutine()
+    {
+        MinigameManager mm = GameManager.Instance.GetService<MinigameManager>();
+
+        float gravityValue = -720f;
+        float currentPlayerGravity = 240f;
+        while(playerCharacter.localPosition.y > -1500f)
+        {
+            currentPlayerGravity += gravityValue * Time.deltaTime;
+            playerCharacter.localPosition += new Vector3(-Mathf.Sign(playerCharacter.localRotation.z) * 320 * Time.deltaTime, currentPlayerGravity * Time.deltaTime); //for some reason this has to be negative kill me
+            yield return null;
+        }
+
+        yield return new WaitForSeconds(3);
+        mm.PlayerLoseMinigame();
+        yield return new WaitUntil(() => mm.IsScreenTransitionFinished());
         Destroy(transform.parent.gameObject);
     }
     void AdvanceTimers()

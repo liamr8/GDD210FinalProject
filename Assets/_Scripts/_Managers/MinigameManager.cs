@@ -5,6 +5,7 @@ using System.Threading;
 using UnityEngine.SceneManagement;
 using TMPro;
 using System.Runtime;
+using System.Collections.Generic;
 
 public class MinigameManager : MonoBehaviour
 {
@@ -26,12 +27,14 @@ public class MinigameManager : MonoBehaviour
     {
         //if(currentActiveMinigame == MinigameType.None)
         timerToTransition = 0;
+        GameObject newTransitionScreen = Instantiate(GetTransitionScreenPrefab(TransitionScreenType.Won), transitionScreenParent);
         GameManager.Instance.UpdateGameState(GameState.MinigameTransition);
 
     }
     public void ManageMinigameLost()
     {
         timerToTransition = 0;
+        GameObject newTransitionScreen = Instantiate(GetTransitionScreenPrefab(TransitionScreenType.Won), transitionScreenParent);
         GameManager.Instance.UpdateGameState(GameState.MinigameTransition);
     }
     
@@ -64,6 +67,9 @@ public class MinigameManager : MonoBehaviour
     public GameObject minigameToSurvived;
     public GameObject toLost;
     public GameObject toWon;
+
+    [Header("Testing Tools (warning: nonfunctional currently. ignore.)")]
+    public List<MinigameType> minigamesToExclude;
 
     bool managersFound = false;
 
@@ -102,7 +108,7 @@ public class MinigameManager : MonoBehaviour
         {
             ManageServices();
         }
-
+        UpdateBedroomStats();
         if (IsPlayerAlive())
         {
             if(transitionScreenParent.childCount > 0)
@@ -113,6 +119,7 @@ public class MinigameManager : MonoBehaviour
 
             if (!(minigameParent.childCount > 0))
             {
+                ManageTransitions();
                 if (!bedroomTransitionAnimator.GetBool("AnimationTriggered"))
                 {
                     bedroomTransitionAnimator.SetBool("AnimationTriggered", true);
@@ -128,16 +135,15 @@ public class MinigameManager : MonoBehaviour
                     ChangeCurrentMinigame();
                     bedroomTransitionAnimator.SetBool("AnimationTriggered", false);
                 }
-                ManageTransitions();
+                //ManageTransitions();
                     
             }
             
             if(IsScreenTransitionFinished() && screenTransitionAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime >= 1f)
-                {
-                    Destroy(transitionScreenParent.GetChild(0).gameObject);
-                    Debug.LogError("attempt to destroy transition");
+            {
+                Destroy(transitionScreenParent.GetChild(0).gameObject);
+                Debug.LogError("attempt to destroy transition");
             }
-
         }
         else
         {
@@ -147,7 +153,7 @@ public class MinigameManager : MonoBehaviour
             }
             miniGameTransitionTimer += Time.deltaTime;
         }
-        UpdateBedroomStats();
+        
     }
     public void ManageTransitions()
     {
@@ -172,24 +178,33 @@ public class MinigameManager : MonoBehaviour
     {
         Array minigameTypes = MinigameType.GetValues(typeof(MinigameType));
 
+        int failsafeValue = 0;
         do
         {
             nextMinigame = (MinigameType)minigameTypes.GetValue(UnityEngine.Random.Range(2, minigameTypes.Length)); //starting at 2 to skip none and tutorial values
+            failsafeValue++;
+            Debug.Log(minigamesToExclude.Contains(nextMinigame) + " " + nextMinigame + " " +"failsafe"+(failsafeValue<99));
         }
-        while (nextMinigame == currentActiveMinigame);
+        while (nextMinigame == currentActiveMinigame/* && minigamesToExclude.Contains(nextMinigame) &&
+        failsafeValue < 99*/);  ///// FIX THIS LATER THIS IS REALLY HELPFUL FOR DEBUGGING!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ////////////////////////////////////
+        ////////////////////////////////////
     }
 
 
     Coroutine ChangingMinigameCoroutine = null;
-    public bool IsScreenTransitionFinished()
+    public bool IsScreenTransitionFinished() // Returns the point where the screen transition animation covers the entire screen to allow smooth transitioning between game sections
     {
         if(screenTransitionAnimator != null)
         {
             Debug.LogWarning(screenTransitionAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime);
         }
-        return screenTransitionAnimator != null &&
+        return screenTransitionAnimator != null && 
                         transitionScreenParent.childCount > 0 &&
                         screenTransitionAnimator.GetCurrentAnimatorStateInfo(0).IsTag("Last");
+                        //&& !(screenTransitionAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime < 1.0f)));
+        // this disgusting return statement checks whether or not to transition animation is at the end of the first half of it's animation
+        // or the beginning of the second half of it's animation (denoted with tags "First" (first half) and "Last" (second half))
     }
     public void ChangeCurrentMinigame()
     {
