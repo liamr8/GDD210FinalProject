@@ -26,7 +26,7 @@ public class DarknessMinigame : MonoBehaviour
     [Header("Timer")]
     float loseTimer = 0;
     public float timeToLose;
-    public TMP_Text timerText;
+    public Image timerBarFill;
     bool minigameEndStateDebounce = false;
 
     [Header("Match Stick Information")]
@@ -42,7 +42,6 @@ public class DarknessMinigame : MonoBehaviour
     {
         uiEventSystem = GameObject.Find("EventSystem").GetComponent<EventSystem>();
         UI = GameObject.Find("UI").GetComponent<Canvas>();
-        timerText = GameObject.Find("MinigamePanel").transform.GetChild(0).GetComponent<TMP_Text>();
     }
     
     // Update is called once per frame
@@ -63,13 +62,18 @@ public class DarknessMinigame : MonoBehaviour
                 Debug.LogError("minigame completed");
             }
             AdvanceTimers();
-            timerText.text = "IGNITE\n"+(timeToLose-loseTimer).ToString();
+            timerBarFill.fillAmount = Mathf.InverseLerp(0, timeToLose, timeToLose-loseTimer);//"IGNITE\n"+(timeToLose-loseTimer).ToString();
         }
         ParticleSystem ps = matchStickTip.transform.GetComponent<ParticleSystem>();
         var psEmission = ps.emission;
         if(IsPlayerTouchingMatchStick() || isTouchingMatch && Input.GetTouch(0).phase == TouchPhase.Moved){
             psEmission.rateOverTime = Mathf.Lerp(0, 45f, Mathf.InverseLerp(0, minimumValidMatchStrikeValue, currentMatchStrikeValue));
             psEmission.rateOverDistance = Mathf.Lerp(0, 3f, Mathf.InverseLerp(0, minimumValidMatchStrikeValue, currentMatchStrikeValue));
+        }
+        else
+        {
+            psEmission.rateOverTime = 0;
+            psEmission.rateOverDistance = 0;
         }
         /*testText.text = currentNumberOfValidMatchStrikes.ToString()  + "\n" + currentMatchStrikeValue.ToString() +
          "\n" + IsMatchTipIsTouchingStrikerStrip() + "\n" + Mathf.Abs(touchDelta.magnitude).ToString()

@@ -15,7 +15,7 @@ public class SpiderMinigame : MonoBehaviour
     [SerializeField]float lossTimer = 0;
     public float lossTimerLimit;
 
-    public TMP_Text timerText;
+    public UnityEngine.UI.Image timerBarFill;
 
     [Header("Minigame Values")]
 
@@ -67,7 +67,7 @@ public class SpiderMinigame : MonoBehaviour
             }
             AdvanceTimers();
         }
-        timerText.text = "SHAKE\n" + (lossTimerLimit - lossTimer).ToString();
+        timerBarFill.fillAmount = Mathf.InverseLerp(0, lossTimerLimit, lossTimerLimit-lossTimer);
 
     }
     

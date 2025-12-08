@@ -12,7 +12,7 @@ public class TightropeMinigame : MonoBehaviour
     [SerializeField] float winTimer = 0;
     public float winTimerThreshold;
 
-    public TMP_Text timerText;
+    public UnityEngine.UI.Image timerBarFill;
 
     [Header("Minigame Values")]
     public float tiltPowerMultiplier = 1;
@@ -51,7 +51,7 @@ public class TightropeMinigame : MonoBehaviour
             }
             AdvanceTimers();
         }
-        timerText.text = "BALANCE\n"+(winTimerThreshold - winTimer).ToString();
+        timerBarFill.fillAmount = Mathf.InverseLerp(0, winTimerThreshold, winTimerThreshold-winTimer);
     
     }
     float GetPlayerInput()
@@ -117,14 +117,14 @@ public class TightropeMinigame : MonoBehaviour
 
         float gravityValue = -720f;
         float currentPlayerGravity = 240f;
-        while(playerCharacter.localPosition.y > -1500f)
+        while(playerCharacter.localPosition.y > -1200f)
         {
             currentPlayerGravity += gravityValue * Time.deltaTime;
             playerCharacter.localPosition += new Vector3(-Mathf.Sign(playerCharacter.localRotation.z) * 320 * Time.deltaTime, currentPlayerGravity * Time.deltaTime); //for some reason this has to be negative kill me
             yield return null;
         }
 
-        yield return new WaitForSeconds(3);
+        yield return new WaitForSeconds(1);
         mm.PlayerLoseMinigame();
         yield return new WaitUntil(() => mm.IsScreenTransitionFinished());
         Destroy(transform.parent.gameObject);
