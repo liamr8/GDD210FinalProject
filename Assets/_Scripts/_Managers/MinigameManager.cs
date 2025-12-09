@@ -51,11 +51,11 @@ public class MinigameManager : MonoBehaviour
     [SerializeField]float timeTransitioningMinigame;
 
     [Header("Saved Player Data")]
-    [SerializeField]static int score = 0;
-    [SerializeField]static int lives = 3;
-    [SerializeField]static int maxLives = 3;
+    [SerializeField]int score = 0;
+    [SerializeField]int lives = 3;
+    [SerializeField]int maxLives = 3;
 
-    [SerializeField]static int maximumPointDifficulty = 30; //This is the maximum point value used for increasing the difficulty of the minigames. Anything past this number won't become any harder.
+    [SerializeField]int maximumPointDifficulty = 20; //This is the maximum point value used for increasing the difficulty of the minigames. Anything past this number won't become any harder.
 
     [Header("Minigame Prefabs")]
     public GameObject darknessMinigame;
@@ -76,6 +76,8 @@ public class MinigameManager : MonoBehaviour
     public List<MinigameType> minigamesToExclude;
 
     bool managersFound = false;
+
+    bool loadingSceneDebounce = false; //to prevent multiple scene load calls (i.e. loading the menu)
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -103,6 +105,8 @@ public class MinigameManager : MonoBehaviour
         {
 
         }
+        GameObject _transitionObject = Instantiate(GetTransitionScreenPrefab(TransitionScreenType.Won), transitionScreenParent);
+        _transitionObject.GetComponent<Animator>().Play("transitionStartMinigameInGame", 0, 0f);
     }
     bool transitionDebounce = true; //to prevent code logic from running code multiple times when a transition just finished
     //MUST BE SET TO TRUE BY DEFAULT, OTHERWISE THE FIRST SCREEN TRANSITION TRIGGERS BEHAVIOR THAT SHOULDN'T HAPPEN UNTIL A MINIGAME FIRST ENDS
@@ -155,11 +159,16 @@ public class MinigameManager : MonoBehaviour
                 //ManageTransitions();
             }
         }
-        else
+        else if (!(minigameParent.childCount > 0))
         {
+            if(!loadingSceneDebounce)
+            {
+                loadingSceneDebounce = true;
+                GameManager.Instance.LoadSceneFromGameManagerAsync("Menu");
+            }
             if (IsScreenTransitionFinished())
             {
-                SceneManager.LoadScene("Menu");
+                GameManager.Instance.ActivateScene(); // loads the scene the moment the transition finishes
             }
         }
         
@@ -206,7 +215,7 @@ public class MinigameManager : MonoBehaviour
         ////////////////////////////////////
         ////////////////////////////////////
     }
-    public static float GetCurrentDifficultyValue() //returns a float with 
+    public float GetCurrentDifficultyValue() //returns a float with 
     {
         return Mathf.InverseLerp(0, maximumPointDifficulty, score);
     }

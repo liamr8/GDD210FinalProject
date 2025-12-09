@@ -49,15 +49,20 @@ public class SpiderMinigame : MonoBehaviour
 
     bool minigameEndStateDebounce = false;
 
+    GameManager gm;
+    MinigameManager mm;
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
+        gm = GameManager.Instance;
+        mm = gm.GetService<MinigameManager>();
         localPs = spiderLocalParticleTransform.GetComponent<ParticleSystem>();
         worldSpacePs = spiderWorldSpaceParticleTransform.GetComponent<ParticleSystem>();
         ParticleSystem.MainModule localPsmain = localPs.main;
-        localPsmain.maxParticles = baseMinimumAmountOfSpiders + (int)UnityEngine.Random.Range(0, Mathf.Lerp(0, maximumAmountOfAdditionalSpidersFromDifficulty, MinigameManager.GetCurrentDifficultyValue()));
-        lossTimerLimit = Mathf.Lerp(baseDifficultyTimeToLose, maximumDifficultyTimeToLose, MinigameManager.GetCurrentDifficultyValue());
-        shakePowerSuccessThreshold = Mathf.Lerp(1.0f, maximumDifficultyShakePower, MinigameManager.GetCurrentDifficultyValue());
+        localPsmain.maxParticles = baseMinimumAmountOfSpiders + (int)UnityEngine.Random.Range(0, Mathf.Lerp(0, maximumAmountOfAdditionalSpidersFromDifficulty, mm.GetCurrentDifficultyValue()));
+        lossTimerLimit = Mathf.Lerp(baseDifficultyTimeToLose, maximumDifficultyTimeToLose, mm.GetCurrentDifficultyValue());
+        shakePowerSuccessThreshold = Mathf.Lerp(1.0f, maximumDifficultyShakePower, mm.GetCurrentDifficultyValue());
         numberOfSpiders = localPs.main.maxParticles;
         originalNumberOfSpiders = numberOfSpiders;
         originalBookParentLocalPosition = spiderBookParent.localPosition;

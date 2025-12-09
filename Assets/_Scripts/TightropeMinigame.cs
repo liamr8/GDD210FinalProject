@@ -39,14 +39,19 @@ public class TightropeMinigame : MonoBehaviour
 
     bool minigameEndStateDebounce = false;
 
+    GameManager gm;
+    MinigameManager mm;
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
+        gm = GameManager.Instance;
+        mm = gm.GetService<MinigameManager>();
         initialDirection = (Random.Range(0,2) > 0) ? 1 : -1; //picks random direction to start the player tilting in
         tiltValue = Random.Range(6,8) * initialDirection;
-        winTimerThreshold = Mathf.Lerp(baseDifficultyTimeToWin, maximumDifficultyTimeToWin, MinigameManager.GetCurrentDifficultyValue());
-        losingBalanceTimerLimit = Random.Range(baseDifficultyTimeToLoseBalance, baseDifficultyTimeToLoseBalance - Mathf.Lerp(0,maximumDifficultyTimeReductionToLoseBalance, MinigameManager.GetCurrentDifficultyValue()));
-        rotationThresholdToLose = Mathf.Lerp(baseDifficultyRotationThresholdToLose, maximumDifficultyRotationThresholdToLose, MinigameManager.GetCurrentDifficultyValue());
+        winTimerThreshold = Mathf.Lerp(baseDifficultyTimeToWin, maximumDifficultyTimeToWin, mm.GetCurrentDifficultyValue());
+        losingBalanceTimerLimit = Random.Range(baseDifficultyTimeToLoseBalance, baseDifficultyTimeToLoseBalance - Mathf.Lerp(0,maximumDifficultyTimeReductionToLoseBalance, mm.GetCurrentDifficultyValue()));
+        rotationThresholdToLose = Mathf.Lerp(baseDifficultyRotationThresholdToLose, maximumDifficultyRotationThresholdToLose, mm.GetCurrentDifficultyValue());
     }
 
     // Update is called once per frame
@@ -95,7 +100,7 @@ public class TightropeMinigame : MonoBehaviour
         tiltValue += Random.Range(minimumAmountBalanceIsRandomlyLost, maximumAmountBalanceIsRandomlyLost + 
         Random.Range(0f, maximumAdditionalAmountBalanceIsRandomlyLostFromDifficulty)) * direction;
         losingBalanceTimer = 0;
-        losingBalanceTimerLimit = Random.Range(baseDifficultyTimeToLoseBalance, baseDifficultyTimeToLoseBalance - Mathf.Lerp(0,maximumDifficultyTimeReductionToLoseBalance, MinigameManager.GetCurrentDifficultyValue()));
+        losingBalanceTimerLimit = Random.Range(baseDifficultyTimeToLoseBalance, baseDifficultyTimeToLoseBalance - Mathf.Lerp(0,maximumDifficultyTimeReductionToLoseBalance, mm.GetCurrentDifficultyValue()));
     }
 
     bool IsPlayerBalancedOnRope()

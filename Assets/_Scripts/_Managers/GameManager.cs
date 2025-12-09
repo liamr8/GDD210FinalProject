@@ -42,11 +42,11 @@ public class GameManager : MonoBehaviour
     }
     void Start()
     {
-        
+
     }
     void OnDisable()
     {
-        
+
     }
     void Update()
     {
@@ -67,6 +67,8 @@ public class GameManager : MonoBehaviour
     {
         return GameObject.Find("Player").transform;
     }
+
+
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
@@ -93,7 +95,37 @@ public class GameManager : MonoBehaviour
         SceneManager.LoadSceneAsync(sceneName);
     }
     public void ExitGame() { Application.Quit(); }
+    public void StartGame() { LoadSceneFromGameManager("Scene0"); }
     
+    /// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  Learned this through GPT !!!!!!!!!!!!!
+    
+    private AsyncOperation loadOperation;
+
+    private Coroutine sceneLoadAsyncCoroutine = null;
+    public void LoadSceneFromGameManagerAsync(string sceneName)
+    {
+        sceneLoadAsyncCoroutine ??= StartCoroutine(LoadSceneAsyncCoroutine(sceneName));
+    }
+
+    IEnumerator LoadSceneAsyncCoroutine(string sceneName)
+    {
+        loadOperation = SceneManager.LoadSceneAsync(sceneName);
+        loadOperation.allowSceneActivation = false;
+
+        // Wait until scene is almost fully loaded (0.9 is the max before activation)
+        while (loadOperation.progress < 0.9f)
+        {
+            yield return null;
+        }
+    }
+
+    public void ActivateScene()
+    {
+        loadOperation.allowSceneActivation = true;
+        sceneLoadAsyncCoroutine = null;
+    }
+    /// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
     public void UpdateGameState(GameState newState)
     {
         CurrentState = newState;

@@ -1933,7 +1933,7 @@ MonoBehaviour:
   currentSong: {fileID: 0}
   matchMinigame: {fileID: 8300000, guid: 3f8100a4311507a40b8d8f2d06215c9b, type: 3}
   heightsMinigame: {fileID: 8300000, guid: d07882787c424064f941a91a05808982, type: 3}
-  spiderMinigame: {fileID: 8300000, guid: d07882787c424064f941a91a05808982, type: 3}
+  spiderMinigame: {fileID: 8300000, guid: c94a9b3cbf598494493992fe9f83cf08, type: 3}
   defaultTrack: {fileID: 8300000, guid: 8c26d162320bedf498ebc290389a41ca, type: 3}
   bedroomMusic: {fileID: 8300000, guid: 24a9eb2e96c56374fb88ade0f3fbd6f5, type: 3}
   menuMusic: {fileID: 8300000, guid: b0b92094360956e418bbcdbbd8c3179b, type: 3}

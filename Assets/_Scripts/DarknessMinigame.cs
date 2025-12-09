@@ -45,15 +45,21 @@ public class DarknessMinigame : MonoBehaviour
 
     public float minimumValidMatchStrikeValue;
     [SerializeField] private float currentMatchStrikeValue = 0;
+
+    GameManager gm;
+    MinigameManager mm;
+    
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
+        gm = GameManager.Instance;
+        mm = gm.GetService<MinigameManager>();
         uiEventSystem = GameObject.Find("EventSystem").GetComponent<EventSystem>();
         UI = GameObject.Find("UI").GetComponent<Canvas>();
         minimumValidMatchStrikesToWin = (int)UnityEngine.Random.Range(baseMinimumAmountOfMatchstrikesToWin,
-         baseMaximumAmountOfMatchstrikesToWin + Mathf.Lerp(0,maximumAmountOfAdditionalMatchStrikesFromDifficulty, MinigameManager.GetCurrentDifficultyValue())); //randomize number of strikes needed to win each time
+         baseMaximumAmountOfMatchstrikesToWin + Mathf.Lerp(0,maximumAmountOfAdditionalMatchStrikesFromDifficulty, mm.GetCurrentDifficultyValue())); //randomize number of strikes needed to win each time
     
-        timeToLose = Mathf.Lerp(baseDifficultyTimeToLose, maximumDifficultyTimeToLose, MinigameManager.GetCurrentDifficultyValue());
+        timeToLose = Mathf.Lerp(baseDifficultyTimeToLose, maximumDifficultyTimeToLose, mm.GetCurrentDifficultyValue());
     }
     // Update is called once per frame
     void Update()
