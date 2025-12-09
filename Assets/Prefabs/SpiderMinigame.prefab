@@ -130,6 +130,11 @@ MonoBehaviour:
   spiderBookParent: {fileID: 1527233810671663472}
   spiderLocalParticleTransform: {fileID: 7494377253953381506}
   spiderWorldSpaceParticleTransform: {fileID: 4663988814081240858}
+  baseMinimumAmountOfMatchstrikesToWin: 3
+  baseMaximumAmountOfMatchstrikesToWin: 5
+  maximumAmountOfAdditionalMatchStrikesFromDifficulty: 4
+  baseDifficultyTimeToLose: 10
+  maximumDifficultyTimeToLose: 6.5
   lossTimer: 0
   lossTimerLimit: 10
   timerBarFill: {fileID: 3781143089174458658}
@@ -1156,7 +1161,7 @@ ParticleSystem:
         m_RotationOrder: 4
     randomizeRotationDirection: 0
     gravitySource: 1
-    maxNumParticles: 900
+    maxNumParticles: 9999
     customEmitterVelocity: {x: 0, y: 0, z: 0}
     size3D: 0
     rotation3D: 0
@@ -10352,7 +10357,7 @@ MonoBehaviour:
     m_Top: 270
     m_Bottom: 0
   m_ChildAlignment: 1
-  m_Spacing: 0
+  m_Spacing: 470
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 1
   m_ChildControlWidth: 0

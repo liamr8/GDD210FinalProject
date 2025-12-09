@@ -11,6 +11,15 @@ public class SpiderMinigame : MonoBehaviour
     public RectTransform spiderLocalParticleTransform;
     public RectTransform spiderWorldSpaceParticleTransform;
 
+
+    [Header("Difficulty Settings")]
+    public int baseMinimumAmountOfSpiders = 900;
+    public int maximumAmountOfAdditionalSpidersFromDifficulty = 500;
+
+    public float baseDifficultyTimeToLose = 10f;
+    public float maximumDifficultyTimeToLose = 7f;
+    public float maximumDifficultyShakePower = 0.8f;
+
     [Header("Timers")]
     [SerializeField]float lossTimer = 0;
     public float lossTimerLimit;
@@ -45,6 +54,10 @@ public class SpiderMinigame : MonoBehaviour
     {
         localPs = spiderLocalParticleTransform.GetComponent<ParticleSystem>();
         worldSpacePs = spiderWorldSpaceParticleTransform.GetComponent<ParticleSystem>();
+        ParticleSystem.MainModule localPsmain = localPs.main;
+        localPsmain.maxParticles = baseMinimumAmountOfSpiders + (int)UnityEngine.Random.Range(0, Mathf.Lerp(0, maximumAmountOfAdditionalSpidersFromDifficulty, MinigameManager.GetCurrentDifficultyValue()));
+        lossTimerLimit = Mathf.Lerp(baseDifficultyTimeToLose, maximumDifficultyTimeToLose, MinigameManager.GetCurrentDifficultyValue());
+        shakePowerSuccessThreshold = Mathf.Lerp(1.0f, maximumDifficultyShakePower, MinigameManager.GetCurrentDifficultyValue());
         numberOfSpiders = localPs.main.maxParticles;
         originalNumberOfSpiders = numberOfSpiders;
         originalBookParentLocalPosition = spiderBookParent.localPosition;

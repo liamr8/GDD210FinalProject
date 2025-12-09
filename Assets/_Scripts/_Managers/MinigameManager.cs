@@ -9,6 +9,7 @@ using System.Collections.Generic;
 
 public class MinigameManager : MonoBehaviour
 {
+    public MinigameType lastMinigame;
     public MinigameType currentActiveMinigame;
     public MinigameType nextMinigame;
 
@@ -29,13 +30,14 @@ public class MinigameManager : MonoBehaviour
         timerToTransition = 0;
         GameObject newTransitionScreen = Instantiate(GetTransitionScreenPrefab(TransitionScreenType.Won), transitionScreenParent);
         GameManager.Instance.UpdateGameState(GameState.MinigameTransition);
-
+        transitionDebounce = false;
     }
     public void ManageMinigameLost()
     {
         timerToTransition = 0;
         GameObject newTransitionScreen = Instantiate(GetTransitionScreenPrefab(TransitionScreenType.Won), transitionScreenParent);
         GameManager.Instance.UpdateGameState(GameState.MinigameTransition);
+        transitionDebounce = false;
     }
     
 
@@ -49,9 +51,11 @@ public class MinigameManager : MonoBehaviour
     [SerializeField]float timeTransitioningMinigame;
 
     [Header("Saved Player Data")]
-    [SerializeField]int score = 0;
-    [SerializeField]int lives = 3;
-    [SerializeField]int maxLives = 3;
+    [SerializeField]static int score = 0;
+    [SerializeField]static int lives = 3;
+    [SerializeField]static int maxLives = 3;
+
+    [SerializeField]static int maximumPointDifficulty = 30; //This is the maximum point value used for increasing the difficulty of the minigames. Anything past this number won't become any harder.
 
     [Header("Minigame Prefabs")]
     public GameObject darknessMinigame;
@@ -100,6 +104,8 @@ public class MinigameManager : MonoBehaviour
 
         }
     }
+    bool transitionDebounce = true; //to prevent code logic from running code multiple times when a transition just finished
+    //MUST BE SET TO TRUE BY DEFAULT, OTHERWISE THE FIRST SCREEN TRANSITION TRIGGERS BEHAVIOR THAT SHOULDN'T HAPPEN UNTIL A MINIGAME FIRST ENDS
 
     // Update is called once per frame
     void Update()
@@ -109,14 +115,14 @@ public class MinigameManager : MonoBehaviour
             ManageServices();
         }
         UpdateBedroomStats();
+
+        if(transitionScreenParent.childCount > 0)
+        {
+            screenTransitionAnimator = transitionScreenParent.GetChild(0).GetComponent<Animator>();
+        }
+
         if (IsPlayerAlive())
         {
-            if(transitionScreenParent.childCount > 0)
-            {
-                screenTransitionAnimator = transitionScreenParent.GetChild(0).GetComponent<Animator>();
-            }
-                    
-
             if (!(minigameParent.childCount > 0))
             {
                 ManageTransitions();
@@ -129,29 +135,38 @@ public class MinigameManager : MonoBehaviour
                 
                     
                 minigameParent.gameObject.SetActive(false);
-                if (miniGameTransitionTimer > 3 && IsScreenTransitionFinished())
+                if(IsScreenTransitionFinished())
                 {
-                    PickNewRandomMinigame();
-                    ChangeCurrentMinigame();
-                    bedroomTransitionAnimator.SetBool("AnimationTriggered", false);
+                    if(!transitionDebounce) {
+                        transitionDebounce = true;
+                        //Debug.LogError("Modified value");
+                        lastMinigame = currentActiveMinigame;
+                        currentActiveMinigame = MinigameType.None;
+                        GameManager.Instance.UpdateGameState(GameState.Bedroom);
+                    }
+                    if (miniGameTransitionTimer > 3 && nextMinigame == MinigameType.None && currentActiveMinigame == MinigameType.None)
+                    {
+                        PickNewRandomMinigame();
+                        ChangeCurrentMinigame();
+                        //Debug.LogWarning("tried to pick minigame");
+                        bedroomTransitionAnimator.SetBool("AnimationTriggered", false);
+                    }
                 }
                 //ManageTransitions();
-                    
-            }
-            
-            if(IsScreenTransitionFinished() && screenTransitionAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime >= 1f)
-            {
-                Destroy(transitionScreenParent.GetChild(0).gameObject);
-                Debug.LogError("attempt to destroy transition");
             }
         }
         else
         {
-            if (miniGameTransitionTimer > 3)
+            if (IsScreenTransitionFinished())
             {
                 SceneManager.LoadScene("Menu");
             }
-            miniGameTransitionTimer += Time.deltaTime;
+        }
+        
+        if(IsScreenTransitionFinished() && screenTransitionAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime >= 1f)
+        {
+            Destroy(transitionScreenParent.GetChild(0).gameObject);
+            //Debug.LogError("attempt to destroy transition");
         }
         
     }
@@ -162,6 +177,7 @@ public class MinigameManager : MonoBehaviour
             if(!(transitionScreenParent.childCount > 0) && miniGameTransitionTimer > 2.8f) //magic num 2.8f
             {
                 GameObject newTransitionScreen = Instantiate(GetTransitionScreenPrefab(TransitionScreenType.Won), transitionScreenParent);
+                GameManager.Instance.UpdateGameState(GameState.MinigameTransition);
             }
 
             miniGameTransitionTimer += Time.deltaTime;
@@ -185,19 +201,22 @@ public class MinigameManager : MonoBehaviour
             failsafeValue++;
             Debug.Log(minigamesToExclude.Contains(nextMinigame) + " " + nextMinigame + " " +"failsafe"+(failsafeValue<99));
         }
-        while (nextMinigame == currentActiveMinigame/* && minigamesToExclude.Contains(nextMinigame) &&
+        while (nextMinigame == lastMinigame/* && minigamesToExclude.Contains(nextMinigame) &&
         failsafeValue < 99*/);  ///// FIX THIS LATER THIS IS REALLY HELPFUL FOR DEBUGGING!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         ////////////////////////////////////
         ////////////////////////////////////
     }
+    public static float GetCurrentDifficultyValue() //returns a float with 
+    {
+        return Mathf.InverseLerp(0, maximumPointDifficulty, score);
+    }
 
-
-    Coroutine ChangingMinigameCoroutine = null;
+    //Coroutine ChangingMinigameCoroutine = null;
     public bool IsScreenTransitionFinished() // Returns the point where the screen transition animation covers the entire screen to allow smooth transitioning between game sections
     {
         if(screenTransitionAnimator != null)
         {
-            Debug.LogWarning(screenTransitionAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime);
+           // Debug.LogWarning(screenTransitionAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime);
         }
         return screenTransitionAnimator != null && 
                         transitionScreenParent.childCount > 0 &&
@@ -208,14 +227,21 @@ public class MinigameManager : MonoBehaviour
     }
     public void ChangeCurrentMinigame()
     {
-        Debug.LogError("ChangingMinigameCoroutine is null: " + ChangingMinigameCoroutine == null);
-        ChangingMinigameCoroutine ??= StartCoroutine(IChangeCurrentMinigame());
-    }
-    public IEnumerator IChangeCurrentMinigame()
-    {
-        Debug.LogWarning("Entering coroutine");
+        //Debug.LogError("ChangingMinigameCoroutine is null: " + ChangingMinigameCoroutine == null);
         currentActiveMinigame = nextMinigame;
         nextMinigame = MinigameType.None;
+        miniGameTransitionTimer = 0;
+        GameManager.Instance.UpdateGameState(GameState.Minigame);
+        GameObject newMinigame = Instantiate(GetMinigamePrefab(currentActiveMinigame), minigameParent);
+        newMinigame.transform.SetSiblingIndex(0);
+        
+        minigameParent.gameObject.SetActive(true);
+        //ChangingMinigameCoroutine = null;
+        //ChangingMinigameCoroutine ??= StartCoroutine(IChangeCurrentMinigame());
+    }
+    /*public IEnumerator IChangeCurrentMinigame()
+    {
+        Debug.LogWarning("Entering coroutine");
         yield return new WaitUntil(() => GetMinigamePrefab(currentActiveMinigame) != null);
         miniGameTransitionTimer = 0;
         GameManager.Instance.UpdateGameState(GameState.Minigame);
@@ -224,7 +250,8 @@ public class MinigameManager : MonoBehaviour
         
         minigameParent.gameObject.SetActive(true);
         ChangingMinigameCoroutine = null;
-    }
+    }*/ 
+    //KEEPING THIS HERE JUST IN CASE FOR SOME REASON IT WORKS WITHOUT IT NOW????????
 
 
 

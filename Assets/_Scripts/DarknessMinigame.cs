@@ -23,6 +23,14 @@ public class DarknessMinigame : MonoBehaviour
     public EventSystem uiEventSystem;
     private Canvas UI;
 
+    [Header("Difficulty Settings")]
+    public int baseMinimumAmountOfMatchstrikesToWin = 3;
+    public int baseMaximumAmountOfMatchstrikesToWin = 5;
+    public int maximumAmountOfAdditionalMatchStrikesFromDifficulty = 4;
+
+    public float baseDifficultyTimeToLose = 13f;
+    public float maximumDifficultyTimeToLose = 7f;
+
     [Header("Timer")]
     float loseTimer = 0;
     public float timeToLose;
@@ -42,8 +50,11 @@ public class DarknessMinigame : MonoBehaviour
     {
         uiEventSystem = GameObject.Find("EventSystem").GetComponent<EventSystem>();
         UI = GameObject.Find("UI").GetComponent<Canvas>();
-    }
+        minimumValidMatchStrikesToWin = (int)UnityEngine.Random.Range(baseMinimumAmountOfMatchstrikesToWin,
+         baseMaximumAmountOfMatchstrikesToWin + Mathf.Lerp(0,maximumAmountOfAdditionalMatchStrikesFromDifficulty, MinigameManager.GetCurrentDifficultyValue())); //randomize number of strikes needed to win each time
     
+        timeToLose = Mathf.Lerp(baseDifficultyTimeToLose, maximumDifficultyTimeToLose, MinigameManager.GetCurrentDifficultyValue());
+    }
     // Update is called once per frame
     void Update()
     {
@@ -66,7 +77,7 @@ public class DarknessMinigame : MonoBehaviour
         }
         ParticleSystem ps = matchStickTip.transform.GetComponent<ParticleSystem>();
         var psEmission = ps.emission;
-        if(IsPlayerTouchingMatchStick() || isTouchingMatch && Input.GetTouch(0).phase == TouchPhase.Moved){
+        if((IsPlayerTouchingMatchStick() || isTouchingMatch) && Input.GetTouch(0).phase == TouchPhase.Moved){
             psEmission.rateOverTime = Mathf.Lerp(0, 45f, Mathf.InverseLerp(0, minimumValidMatchStrikeValue, currentMatchStrikeValue));
             psEmission.rateOverDistance = Mathf.Lerp(0, 3f, Mathf.InverseLerp(0, minimumValidMatchStrikeValue, currentMatchStrikeValue));
         }

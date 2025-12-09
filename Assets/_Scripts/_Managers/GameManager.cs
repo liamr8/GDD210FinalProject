@@ -18,9 +18,7 @@ public class GameManager : MonoBehaviour
     public static event Action<GameState> OnGameStateChanged;
     public static event Action<Type> OnServiceRegistered;
 
-    [Header("Saved Player Data")]
-    int points = 0;
-    int lives = 3;
+    
     
     
     private void Awake()
@@ -82,7 +80,7 @@ public class GameManager : MonoBehaviour
                 UpdateGameState(GameState.Tutorial);
                 break;
             case "Scene0":
-                UpdateGameState(GameState.MinigameTransition);
+                UpdateGameState(GameState.Bedroom);
                 break;
             default:
                 // code block
@@ -107,6 +105,8 @@ public class GameManager : MonoBehaviour
                 break;
             case GameState.Tutorial:
                 break;
+            case GameState.Bedroom:
+                break;
             case GameState.Minigame:
                 break;
             case GameState.MinigameTransition:
@@ -120,7 +120,7 @@ public class GameManager : MonoBehaviour
             
 
         }
-
+        Debug.Log("/////////////////////////////////////Game State changed to: " + newState);
         OnGameStateChanged?.Invoke(newState);
     }
 
