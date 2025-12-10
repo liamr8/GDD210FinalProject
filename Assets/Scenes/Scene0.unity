@@ -427,6 +427,8 @@ MonoBehaviour:
   toLost: {fileID: 9118603062211753449, guid: df92b38d8ab504644bc53e3c9c403e43, type: 3}
   toWon: {fileID: 9118603062211753449, guid: df92b38d8ab504644bc53e3c9c403e43, type: 3}
   minigamesToExclude: 
+  _transitionStartDebounce: 1
+  _transitionEndDebounce: 1
 --- !u!4 &300980627
 Transform:
   m_ObjectHideFlags: 0
@@ -666,7 +668,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.865, g: 0.865, b: 0.865, a: 1}
+  m_Color: {r: 0.851, g: 0.851, b: 0.851, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1289,8 +1291,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
-  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+    rgba: 4294506744
+  m_fontColor: {r: 0.972549, g: 0.972549, b: 0.972549, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -1682,8 +1684,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
-  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+    rgba: 4294506744
+  m_fontColor: {r: 0.972549, g: 0.972549, b: 0.972549, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -2092,6 +2094,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AudioManager
   mainAudioMixer: {fileID: 24100000, guid: 689f7c0b001f50a488aea9168a4baef1, type: 2}
+  currentSavedMasterPitch: 1
   musicSourceA: {fileID: 1565990888}
   musicSourceB: {fileID: 1864353478}
   currentMusicSource: {fileID: 0}
@@ -2107,7 +2110,7 @@ MonoBehaviour:
   alarmClockSource: {fileID: 939811483}
   alarmClockWinLoseSFX:
   - {fileID: 8300000, guid: f0e60fcc94aaa9146a263f3307cc5bd6, type: 3}
-  - {fileID: 8300000, guid: 3b97a4273ec00c04897f878ca53185f8, type: 3}
+  - {fileID: 8300000, guid: b27e7260510cf2c478f88934235e4c87, type: 3}
 --- !u!1 &2130113318
 GameObject:
   m_ObjectHideFlags: 0

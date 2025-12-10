@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,12 +10,21 @@ public class MainMenuBehavior : MonoBehaviour
     public GameObject screenTransitionObject;
 
     public Button[] mainMenuButtons;
+    public TMP_Text highScoreText;
 
     GameObject transitionObject = null;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         ManageMainMenuTransition("transitionStartMinigameInGame");
+        if(GameManager.playerHighscore > 0)
+        {
+            highScoreText.text = "High Score: <color=#E6DFE5>" + GameManager.playerHighscore.ToString() + "</color>";
+        }
+        else
+        {
+            highScoreText.text = "";
+        }
     }
 
     Coroutine transitionCoroutine;

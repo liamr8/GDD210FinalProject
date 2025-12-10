@@ -30,6 +30,7 @@ public class DarknessMinigame : MonoBehaviour
 
     public float baseDifficultyTimeToLose = 13f;
     public float maximumDifficultyTimeToLose = 7f;
+    public float maximumDifficultyValidMatchStrikeValue = 200f;
 
     [Header("Timer")]
     float loseTimer = 0;
@@ -61,9 +62,11 @@ public class DarknessMinigame : MonoBehaviour
         mm = gm.GetService<MinigameManager>();
         uiEventSystem = GameObject.Find("EventSystem").GetComponent<EventSystem>();
         UI = GameObject.Find("UI").GetComponent<Canvas>();
-        minimumValidMatchStrikesToWin = (int)UnityEngine.Random.Range(baseMinimumAmountOfMatchstrikesToWin,
+        minimumValidMatchStrikesToWin = (int)UnityEngine.Random.Range(baseMinimumAmountOfMatchstrikesToWin + Mathf.Lerp(0,2, mm.GetCurrentDifficultyValue()),
          baseMaximumAmountOfMatchstrikesToWin + Mathf.Lerp(0,maximumAmountOfAdditionalMatchStrikesFromDifficulty, mm.GetCurrentDifficultyValue())); //randomize number of strikes needed to win each time
-    
+
+        minimumValidMatchStrikeValue = Mathf.Lerp(minimumValidMatchStrikeValue, maximumDifficultyValidMatchStrikeValue, mm.GetCurrentDifficultyValue());
+
         timeToLose = Mathf.Lerp(baseDifficultyTimeToLose, maximumDifficultyTimeToLose, mm.GetCurrentDifficultyValue());
     }
     // Update is called once per frame

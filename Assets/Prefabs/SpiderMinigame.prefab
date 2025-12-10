@@ -132,7 +132,7 @@ MonoBehaviour:
   spiderLocalParticleTransform: {fileID: 7494377253953381506}
   spiderWorldSpaceParticleTransform: {fileID: 4663988814081240858}
   baseMinimumAmountOfSpiders: 900
-  maximumAmountOfAdditionalSpidersFromDifficulty: 500
+  maximumAmountOfAdditionalSpidersFromDifficulty: 400
   baseDifficultyTimeToLose: 10
   maximumDifficultyTimeToLose: 6.5
   baseDifficultyShakePower: 9.2
@@ -511,8 +511,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
-  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+    rgba: 4294506744
+  m_fontColor: {r: 0.972549, g: 0.972549, b: 0.972549, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -10908,8 +10908,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
-  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+    rgba: 4294506744
+  m_fontColor: {r: 0.972549, g: 0.972549, b: 0.972549, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:

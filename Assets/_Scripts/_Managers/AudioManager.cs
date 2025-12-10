@@ -4,9 +4,15 @@ using UnityEngine.Assertions.Must;
 using System.Collections;
 using UnityEngine.Audio;
 using UnityEngine.UI;
+using Unity.VisualScripting;
 public class AudioManager : MonoBehaviour
 {
     public AudioMixer mainAudioMixer;
+
+    [SerializeField] float currentSavedMasterPitch = 1.0f;
+
+    public float GetCurrentSavedMasterPitch() {return currentSavedMasterPitch;}
+
 
     public AudioSource musicSourceA;
     public AudioSource musicSourceB;
@@ -37,6 +43,8 @@ public class AudioManager : MonoBehaviour
     void Start()
     {
         GameManager.OnGameStateChanged += ManageGameStateChangedForAudio;
+        GameManager.OnGameStateChanged += ResetMasterParameters;
+        
         GameManager.Instance.RegisterService(this);
         ManageServices();
         currentMusicSource = musicSourceA;
@@ -47,6 +55,9 @@ public class AudioManager : MonoBehaviour
             MinigameManager.OnMinigameLost += ManageAudioOnMinigameLost;
             MinigameManager.OnMinigameDestroyed += ManageAudioOnMinigameDestroyed;
             MinigameManager.OnMinigameStarted += ManageAudioOnMinigameStart;
+            MinigameManager.OnMinigameWonExit += ManageAudioOnCloudTransition;
+            MinigameManager.OnMinigameLostExit += ManageAudioOnCloudTransition;
+            MinigameManager.OnTransitionStarted += ManageAudioOnCloudTransition;
             eventHandlersSubscribed = true;
         }
     }
@@ -64,11 +75,46 @@ public class AudioManager : MonoBehaviour
             MinigameManager.OnMinigameLost += ManageAudioOnMinigameLost;
             MinigameManager.OnMinigameDestroyed += ManageAudioOnMinigameDestroyed;
             MinigameManager.OnMinigameStarted += ManageAudioOnMinigameStart;
+            MinigameManager.OnMinigameWonExit += ManageAudioOnCloudTransition;
+            MinigameManager.OnMinigameLostExit += ManageAudioOnCloudTransition;
+            MinigameManager.OnTransitionStarted += ManageAudioOnCloudTransition;
             eventHandlersSubscribed = true;
         }
         ManageSongPlayback();
         //Debug.LogError("Live audio source time: " + currentMusicSource.time +"\nSaved playback time: " + songPlaybackTime);
         //Debug.Log("musicSourceA is playing: "+ musicSourceA.isPlaying+"\nmusicSourceB is playing: " + musicSourceB.isPlaying);
+    }
+
+
+    Coroutine transitionAudioCoroutine = null;
+    public void ManageAudioOnCloudTransition()
+    {
+        //Debug.Log("trying to muffle audio");
+        transitionAudioCoroutine ??= StartCoroutine(MuffleAudio());
+    }
+    IEnumerator MuffleAudio()
+    {
+        while(mainAudioMixer.GetFloat("MasterLowPass", out float currentCutoff) && currentCutoff > 1600f
+        && mainAudioMixer.GetFloat("MasterPitch", out float currentPitch) && currentPitch > currentSavedMasterPitch-0.1f)
+        {
+            mainAudioMixer.SetFloat("MasterLowPass", Mathf.Max(3000f, currentCutoff - 44000f * Time.unscaledDeltaTime));
+            mainAudioMixer.SetFloat("MasterPitch", Mathf.Max(currentSavedMasterPitch-0.1f, currentPitch - 0.25f * Time.unscaledDeltaTime));
+            yield return null;
+        }
+        mainAudioMixer.SetFloat("MasterLowPass", 3000f);
+        mainAudioMixer.SetFloat("MasterPitch", currentSavedMasterPitch-0.1f);
+        yield return new WaitUntil(() => _minigameManager.IsScreenTransitionFinished());
+
+        while(mainAudioMixer.GetFloat("MasterLowPass", out float currentCutoff) && currentCutoff < 22000f 
+        && mainAudioMixer.GetFloat("MasterPitch", out float currentPitch) && currentPitch < currentSavedMasterPitch)
+        {
+            mainAudioMixer.SetFloat("MasterLowPass", Mathf.Min(22000f, currentCutoff + 66000f * Time.unscaledDeltaTime));
+            mainAudioMixer.SetFloat("MasterPitch", Mathf.Min(currentSavedMasterPitch, currentPitch + 0.6f * Time.unscaledDeltaTime));
+            yield return null;
+        }
+        mainAudioMixer.SetFloat("MasterLowPass", 22000f);
+        mainAudioMixer.SetFloat("MasterPitch", currentSavedMasterPitch);
+        transitionAudioCoroutine = null;
     }
 
     public void ManageAudioOnMinigameStart()
@@ -91,43 +137,54 @@ public class AudioManager : MonoBehaviour
     public void ManageAudioOnMinigameDestroyed()
     {
         ToggleMinigameAudio(false);
+        if(GameManager.Instance.GetService<MinigameManager>().GetScore() % 3 == 0)
+            currentSavedMasterPitch = 1f + (GameManager.Instance.GetService<MinigameManager>().GetScore() / 3) * 0.025f;
         alarmClockSource.Stop();
     }
-
+    
+    public void ResetMasterParameters(GameState state)
+    {
+        if(state != GameState.Menu)
+            return;
+        mainAudioMixer.SetFloat("MasterLowPass", 22000f);
+        mainAudioMixer.SetFloat("MasterPitch", 1.0f);
+        currentSavedMasterPitch = 1.0f;
+    }
     //Audio toggles
     public void ToggleSFXAudio(bool enabled)
     {
         if(enabled)
         {
-            mainAudioMixer.SetFloat("SFX", 0f);
+            mainAudioMixer.SetFloat("SFXVolume", 0f);
         }
         else
         {
-            mainAudioMixer.SetFloat("SFX", -80f);
+            mainAudioMixer.SetFloat("SFXVolume", -80f);
         }
     }
     public void ToggleMinigameAudio(bool enabled)
     {
         if(enabled)
         {
-            mainAudioMixer.SetFloat("Minigame", 0f);
+            mainAudioMixer.SetFloat("MinigameVolume", 0f);
         }
         else
         {
-            mainAudioMixer.SetFloat("Minigame", -80f);
+            mainAudioMixer.SetFloat("MinigameVolume", -80f);
         }
     }
     public void ToggleUIAudio(bool enabled)
     {
         if(enabled)
         {
-            mainAudioMixer.SetFloat("UI", 0f);
+            mainAudioMixer.SetFloat("UIVolume", 0f);
         }
         else
         {
-            mainAudioMixer.SetFloat("UI", -80f);
+            mainAudioMixer.SetFloat("UIVolume", -80f);
         }
     }
+    
     
 
     //chatgpt hihihihihihihihi no time
@@ -308,6 +365,9 @@ public class AudioManager : MonoBehaviour
         MinigameManager.OnMinigameLost -= ManageAudioOnMinigameLost;
         MinigameManager.OnMinigameDestroyed -= ManageAudioOnMinigameDestroyed;
         MinigameManager.OnMinigameStarted -= ManageAudioOnMinigameStart;
+        MinigameManager.OnMinigameWonExit -= ManageAudioOnCloudTransition;
+        MinigameManager.OnMinigameLostExit -= ManageAudioOnCloudTransition;
+        MinigameManager.OnTransitionStarted -= ManageAudioOnCloudTransition;
     }
 
     private void OnDestroy()

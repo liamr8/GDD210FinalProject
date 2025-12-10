@@ -31,6 +31,8 @@ public class MinigameManager : MonoBehaviour
     public static event OnTransition OnMinigameWonExit;
     public static event OnTransition OnMinigameLostExit;
 
+    public static event OnTransition OnTransitionStarted;
+
     public static event OnMinigameEvent OnMinigameWon;
     public static event OnMinigameEvent OnMinigameLost;
     public static event OnMinigameEvent OnMinigameDestroyed;
@@ -42,14 +44,14 @@ public class MinigameManager : MonoBehaviour
         timerToTransition = 0;
         GameObject newTransitionScreen = Instantiate(GetTransitionScreenPrefab(TransitionScreenType.Won), transitionScreenParent);
         GameManager.Instance.UpdateGameState(GameState.MinigameTransition);
-        transitionDebounce = false;
+        _transitionStartDebounce = false;
     }
     public void ManageMinigameLostExit()
     {
         timerToTransition = 0;
         GameObject newTransitionScreen = Instantiate(GetTransitionScreenPrefab(TransitionScreenType.Won), transitionScreenParent);
         GameManager.Instance.UpdateGameState(GameState.MinigameTransition);
-        transitionDebounce = false;
+        _transitionStartDebounce = false;
     }
     
 
@@ -117,12 +119,13 @@ public class MinigameManager : MonoBehaviour
         ManageServices();
         if(managersFound)
         {
-
+            
         }
         GameObject _transitionObject = Instantiate(GetTransitionScreenPrefab(TransitionScreenType.Won), transitionScreenParent);
         _transitionObject.GetComponent<Animator>().Play("transitionStartMinigameInGame", 0, 0f);
     }
-    bool transitionDebounce = true; //to prevent code logic from running code multiple times when a transition just finished
+    [SerializeField]bool _transitionStartDebounce = true; //to prevent code logic from running code multiple times when a transition just finished
+    [SerializeField]bool _transitionEndDebounce = true;
     //MUST BE SET TO TRUE BY DEFAULT, OTHERWISE THE FIRST SCREEN TRANSITION TRIGGERS BEHAVIOR THAT SHOULDN'T HAPPEN UNTIL A MINIGAME FIRST ENDS
 
     // Update is called once per frame
@@ -132,6 +135,7 @@ public class MinigameManager : MonoBehaviour
         {
             ManageServices();
         }
+        
         UpdateBedroomStats();
 
         if(transitionScreenParent.childCount > 0)
@@ -155,15 +159,17 @@ public class MinigameManager : MonoBehaviour
                 minigameParent.gameObject.SetActive(false);
                 if(IsScreenTransitionFinished())
                 {
-                    if(!transitionDebounce) {
-                        transitionDebounce = true;
+                    if(!_transitionStartDebounce) {
+                        _transitionStartDebounce = true;
                         //Debug.LogError("Modified value");
                         lastMinigame = currentActiveMinigame;
                         currentActiveMinigame = MinigameType.None;
                         GameManager.Instance.UpdateGameState(GameState.Bedroom);
                     }
-                    if (miniGameTransitionTimer > 3 && nextMinigame == MinigameType.None && currentActiveMinigame == MinigameType.None)
+                    if (miniGameTransitionTimer > 3 && nextMinigame == MinigameType.None && currentActiveMinigame == MinigameType.None
+                    && _transitionEndDebounce == false)
                     {
+                        _transitionEndDebounce = true;
                         PickNewRandomMinigame();
                         ChangeCurrentMinigame();
                         //Debug.LogWarning("tried to pick minigame");
@@ -175,7 +181,8 @@ public class MinigameManager : MonoBehaviour
         }
         else if (!(minigameParent.childCount > 0))
         {
-            GameManager.playerHighscore = score;
+            if(score > GameManager.playerHighscore)
+                GameManager.playerHighscore = score;
             if(!loadingSceneDebounce)
             {
                 loadingSceneDebounce = true;
@@ -190,6 +197,8 @@ public class MinigameManager : MonoBehaviour
         if(IsScreenTransitionFinished() && screenTransitionAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime >= 1f)
         {
             Destroy(transitionScreenParent.GetChild(0).gameObject);
+            if(!(minigameParent.childCount > 0))
+                _transitionEndDebounce = false;
             //Debug.LogError("attempt to destroy transition");
         }
         
@@ -200,11 +209,12 @@ public class MinigameManager : MonoBehaviour
         {
             if(!(transitionScreenParent.childCount > 0) && miniGameTransitionTimer > 2.8f) //magic num 2.8f
             {
+                OnTransitionStarted?.Invoke();
                 GameObject newTransitionScreen = Instantiate(GetTransitionScreenPrefab(TransitionScreenType.Won), transitionScreenParent);
                 GameManager.Instance.UpdateGameState(GameState.MinigameTransition);
             }
 
-            miniGameTransitionTimer += Time.deltaTime;
+            miniGameTransitionTimer += Time.deltaTime * GameManager.Instance.GetService<AudioManager>().GetCurrentSavedMasterPitch();
         }
         if(GameManager.Instance.CurrentState == GameState.MinigameTransition)
             timerToTransition += Time.deltaTime;
@@ -356,14 +366,19 @@ public class MinigameManager : MonoBehaviour
     
     void UpdateBedroomStats()
     {
-        Debug.LogError("fuck");
-        timerText.text = (Mathf.Ceil(3 - miniGameTransitionTimer)).ToString();
+        //Debug.LogError("fuck");
+        timerText.text = (Mathf.Ceil(Mathf.Clamp(3 - miniGameTransitionTimer, 0, 3))).ToString();
         scoreText.text = "Nights Survived: "+score.ToString();
         for (int i = maxLives-1; i > lives-1; i--)
         {
             playerLivesDisplay.GetChild(i).GetComponent<UnityEngine.UI.Image>().sprite = heartEmpty;
         }
     }
+
+
+    public float GetScore() { return score; }
+
+
     //Service management
     private void ManageServices()
     {
