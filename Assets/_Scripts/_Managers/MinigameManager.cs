@@ -21,10 +21,22 @@ public class MinigameManager : MonoBehaviour
     public Transform playerLivesDisplay;
     public Sprite heartFull, heartEmpty;
     
+
+
+    //Events also i have no idea wtf a delegate is, so if this is terrible practice that's why.
+    //unfortunately i don't have time to learn what they are rn! i do like events tho :3
+
     public delegate void OnTransition();
-    public static event OnTransition OnMinigameWon;
-    public static event OnTransition OnMinigameLost;
-    public void ManageMinigameWon()
+    public delegate void OnMinigameEvent();
+    public static event OnTransition OnMinigameWonExit;
+    public static event OnTransition OnMinigameLostExit;
+
+    public static event OnMinigameEvent OnMinigameWon;
+    public static event OnMinigameEvent OnMinigameLost;
+    public static event OnMinigameEvent OnMinigameDestroyed;
+    public static event OnMinigameEvent OnMinigameStarted;
+
+    public void ManageMinigameWonExit()
     {
         //if(currentActiveMinigame == MinigameType.None)
         timerToTransition = 0;
@@ -32,7 +44,7 @@ public class MinigameManager : MonoBehaviour
         GameManager.Instance.UpdateGameState(GameState.MinigameTransition);
         transitionDebounce = false;
     }
-    public void ManageMinigameLost()
+    public void ManageMinigameLostExit()
     {
         timerToTransition = 0;
         GameObject newTransitionScreen = Instantiate(GetTransitionScreenPrefab(TransitionScreenType.Won), transitionScreenParent);
@@ -96,8 +108,10 @@ public class MinigameManager : MonoBehaviour
         ResetGyro();
 
         GameManager.Instance.RegisterService(this);
-        OnMinigameWon += ManageMinigameWon;
-        OnMinigameLost += ManageMinigameLost;
+
+        OnMinigameWonExit += ManageMinigameWonExit;
+        OnMinigameLostExit += ManageMinigameLostExit;
+        
         if(transitionScreenParent.childCount > 0)
             screenTransitionAnimator = transitionScreenParent.GetChild(0).GetComponent<Animator>();
         ManageServices();
@@ -161,6 +175,7 @@ public class MinigameManager : MonoBehaviour
         }
         else if (!(minigameParent.childCount > 0))
         {
+            GameManager.playerHighscore = score;
             if(!loadingSceneDebounce)
             {
                 loadingSceneDebounce = true;
@@ -245,6 +260,7 @@ public class MinigameManager : MonoBehaviour
         newMinigame.transform.SetSiblingIndex(0);
         
         minigameParent.gameObject.SetActive(true);
+        OnMinigameStarted?.Invoke();
         //ChangingMinigameCoroutine = null;
         //ChangingMinigameCoroutine ??= StartCoroutine(IChangeCurrentMinigame());
     }
@@ -312,12 +328,24 @@ public class MinigameManager : MonoBehaviour
         return new Quaternion(q.x, q.y, -q.z, -q.w);
     }
 
-    public void PlayerWinMinigame(){
-        OnMinigameWon.Invoke();
+
+    public void OnMinigameDestroyedInvoke(){
+        OnMinigameDestroyed?.Invoke();
+    }
+
+    public void OnPlayerWinMinigame(){
+        OnMinigameWon?.Invoke();
+    }
+    public void OnPlayerLoseMinigame(){
+        OnMinigameLost?.Invoke();
+    }
+
+    public void PlayerWinExitMinigame(){
+        OnMinigameWonExit?.Invoke();
         score++;
     }
-    public void PlayerLoseMinigame(){ 
-        OnMinigameLost.Invoke();
+    public void PlayerLoseExitMinigame(){ 
+        OnMinigameLostExit?.Invoke();
         lives--;
     }
 

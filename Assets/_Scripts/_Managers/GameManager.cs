@@ -18,7 +18,7 @@ public class GameManager : MonoBehaviour
     public static event Action<GameState> OnGameStateChanged;
     public static event Action<Type> OnServiceRegistered;
 
-    
+    public static int playerHighscore = 0;
     
     
     private void Awake()

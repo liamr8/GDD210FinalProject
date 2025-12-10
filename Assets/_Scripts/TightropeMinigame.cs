@@ -127,15 +127,19 @@ public class TightropeMinigame : MonoBehaviour
     System.Collections.IEnumerator WinGameCoroutine()
     {
         MinigameManager mm = GameManager.Instance.GetService<MinigameManager>();
+        mm.OnPlayerWinMinigame();
         yield return new WaitForSeconds(3);
-        mm.PlayerWinMinigame();
+        mm.PlayerWinExitMinigame();
         yield return new WaitUntil(() => mm.IsScreenTransitionFinished());
+        mm.OnMinigameDestroyedInvoke();
         Destroy(transform.parent.gameObject);
     }
     
     System.Collections.IEnumerator LoseGameCoroutine()
     {
         MinigameManager mm = GameManager.Instance.GetService<MinigameManager>();
+
+        mm.OnPlayerLoseMinigame();
 
         float gravityValue = -840f;
         float currentPlayerGravity = 300f;
@@ -147,8 +151,9 @@ public class TightropeMinigame : MonoBehaviour
         }
 
         yield return new WaitForSeconds(1);
-        mm.PlayerLoseMinigame();
+        mm.PlayerLoseExitMinigame();
         yield return new WaitUntil(() => mm.IsScreenTransitionFinished());
+        mm.OnMinigameDestroyedInvoke();
         Destroy(transform.parent.gameObject);
     }
     void AdvanceTimers()

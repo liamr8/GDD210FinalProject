@@ -2,10 +2,16 @@ using UnityEngine;
 using System;
 using UnityEngine.Assertions.Must;
 using System.Collections;
+using UnityEngine.Audio;
+using UnityEngine.UI;
 public class AudioManager : MonoBehaviour
 {
+    public AudioMixer mainAudioMixer;
+
     public AudioSource musicSourceA;
     public AudioSource musicSourceB;
+
+    
     [SerializeField] private AudioSource currentMusicSource;
     [Header("Current Playback Information")]
     [SerializeField]float songPlaybackTime;
@@ -19,8 +25,12 @@ public class AudioManager : MonoBehaviour
     [Header("Other Songs")]
     public AudioClip bedroomMusic;
     public AudioClip menuMusic;
+    [Header("SFX")]
+    public AudioSource alarmClockSource;
+    public AudioClip[] alarmClockWinLoseSFX;
 
     bool managersFound = false;
+    bool eventHandlersSubscribed = false;
 
     private MinigameManager _minigameManager;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
@@ -33,16 +43,92 @@ public class AudioManager : MonoBehaviour
         if(managersFound)
         {
             ManageSongPlayback();
+            MinigameManager.OnMinigameWon += ManageAudioOnMinigameWon;
+            MinigameManager.OnMinigameLost += ManageAudioOnMinigameLost;
+            MinigameManager.OnMinigameDestroyed += ManageAudioOnMinigameDestroyed;
+            MinigameManager.OnMinigameStarted += ManageAudioOnMinigameStart;
+            eventHandlersSubscribed = true;
         }
     }
 
     // Update is called once per frame
     void Update()
     {
+        if(!managersFound)
+        {
+            ManageServices();
+        }
+        else if(!eventHandlersSubscribed)
+        {
+            MinigameManager.OnMinigameWon += ManageAudioOnMinigameWon;
+            MinigameManager.OnMinigameLost += ManageAudioOnMinigameLost;
+            MinigameManager.OnMinigameDestroyed += ManageAudioOnMinigameDestroyed;
+            MinigameManager.OnMinigameStarted += ManageAudioOnMinigameStart;
+            eventHandlersSubscribed = true;
+        }
         ManageSongPlayback();
         //Debug.LogError("Live audio source time: " + currentMusicSource.time +"\nSaved playback time: " + songPlaybackTime);
         //Debug.Log("musicSourceA is playing: "+ musicSourceA.isPlaying+"\nmusicSourceB is playing: " + musicSourceB.isPlaying);
     }
+
+    public void ManageAudioOnMinigameStart()
+    {
+        ToggleMinigameAudio(true);
+    }
+
+    public void ManageAudioOnMinigameWon()
+    {
+        alarmClockSource.clip = alarmClockWinLoseSFX[0];
+        alarmClockSource.pitch = UnityEngine.Random.Range(0.95f, 1.1f);
+        alarmClockSource.Play();
+    }
+    public void ManageAudioOnMinigameLost()
+    {
+        alarmClockSource.clip = alarmClockWinLoseSFX[1];
+        alarmClockSource.pitch = UnityEngine.Random.Range(0.90f, 1.05f);
+        alarmClockSource.Play();
+    }
+    public void ManageAudioOnMinigameDestroyed()
+    {
+        ToggleMinigameAudio(false);
+        alarmClockSource.Stop();
+    }
+
+    //Audio toggles
+    public void ToggleSFXAudio(bool enabled)
+    {
+        if(enabled)
+        {
+            mainAudioMixer.SetFloat("SFX", 0f);
+        }
+        else
+        {
+            mainAudioMixer.SetFloat("SFX", -80f);
+        }
+    }
+    public void ToggleMinigameAudio(bool enabled)
+    {
+        if(enabled)
+        {
+            mainAudioMixer.SetFloat("Minigame", 0f);
+        }
+        else
+        {
+            mainAudioMixer.SetFloat("Minigame", -80f);
+        }
+    }
+    public void ToggleUIAudio(bool enabled)
+    {
+        if(enabled)
+        {
+            mainAudioMixer.SetFloat("UI", 0f);
+        }
+        else
+        {
+            mainAudioMixer.SetFloat("UI", -80f);
+        }
+    }
+    
 
     //chatgpt hihihihihihihihi no time
     Coroutine crossfadeCoroutine = null;
@@ -214,6 +300,16 @@ public class AudioManager : MonoBehaviour
            // ManageEvents();
         }
     }
+
+    private void OnDisable()
+    {
+        GameManager.OnGameStateChanged -= ManageGameStateChangedForAudio;
+        MinigameManager.OnMinigameWon -= ManageAudioOnMinigameWon;
+        MinigameManager.OnMinigameLost -= ManageAudioOnMinigameLost;
+        MinigameManager.OnMinigameDestroyed -= ManageAudioOnMinigameDestroyed;
+        MinigameManager.OnMinigameStarted -= ManageAudioOnMinigameStart;
+    }
+
     private void OnDestroy()
     {
         GameManager.Instance.DeregisterService<AudioManager>();

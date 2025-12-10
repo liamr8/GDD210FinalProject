@@ -18,7 +18,8 @@ public class SpiderMinigame : MonoBehaviour
 
     public float baseDifficultyTimeToLose = 10f;
     public float maximumDifficultyTimeToLose = 7f;
-    public float maximumDifficultyShakePower = 0.8f;
+    public float baseDifficultyShakePower = 9.2f;
+    public float maximumDifficultyShakePower = 5f;
 
     [Header("Timers")]
     [SerializeField]float lossTimer = 0;
@@ -28,7 +29,7 @@ public class SpiderMinigame : MonoBehaviour
 
     [Header("Minigame Values")]
 
-    public float shakePowerMultiplier = 1;
+    public float shakePowerMultiplier = 10;
     [SerializeField] int originalNumberOfSpiders;
     [SerializeField] int numberOfSpiders = 900;
 
@@ -42,6 +43,8 @@ public class SpiderMinigame : MonoBehaviour
     [SerializeField] Vector2 shakeVector;
     [SerializeField] float visibleBookShakeMultiplier;
 
+    [Header("Audio")]
+    public AudioSource shakeSoundSource;
     ParticleSystem localPs;
     ParticleSystem worldSpacePs;
 
@@ -62,7 +65,7 @@ public class SpiderMinigame : MonoBehaviour
         ParticleSystem.MainModule localPsmain = localPs.main;
         localPsmain.maxParticles = baseMinimumAmountOfSpiders + (int)UnityEngine.Random.Range(0, Mathf.Lerp(0, maximumAmountOfAdditionalSpidersFromDifficulty, mm.GetCurrentDifficultyValue()));
         lossTimerLimit = Mathf.Lerp(baseDifficultyTimeToLose, maximumDifficultyTimeToLose, mm.GetCurrentDifficultyValue());
-        shakePowerSuccessThreshold = Mathf.Lerp(1.0f, maximumDifficultyShakePower, mm.GetCurrentDifficultyValue());
+        shakePowerMultiplier = Mathf.Lerp(baseDifficultyShakePower, maximumDifficultyShakePower, mm.GetCurrentDifficultyValue());
         numberOfSpiders = localPs.main.maxParticles;
         originalNumberOfSpiders = numberOfSpiders;
         originalBookParentLocalPosition = spiderBookParent.localPosition;
@@ -135,6 +138,11 @@ public class SpiderMinigame : MonoBehaviour
             if(shakeCooldownTimer > shakeCooldownTimerLimit 
             && shakeVector.magnitude * shakePowerMultiplier > shakePowerSuccessThreshold)
             {
+                float _audioModifierValue = Mathf.InverseLerp(shakePowerSuccessThreshold, shakePowerSuccessThreshold * 1.5f, shakeVector.magnitude * shakePowerMultiplier);
+                shakeSoundSource.pitch = UnityEngine.Random.Range(0.4f + Mathf.Lerp(0, 0.2f, _audioModifierValue), 0.5f + Mathf.Lerp(0, 0.6f, _audioModifierValue));
+                shakeSoundSource.volume = UnityEngine.Random.Range(0.65f + Mathf.Lerp(0, 0.35f, _audioModifierValue), 0.9f + Mathf.Lerp(0, 0.3f, _audioModifierValue));
+                shakeSoundSource.Play();
+
                 amountOfSpidersToAffect = Mathf.Clamp(UnityEngine.Random.Range(amountOfSpidersToAffectMin, amountOfSpidersToAffectMax + 1), 0, numberOfSpiders);
 
                 shakeCooldownTimer = 0;
@@ -223,19 +231,23 @@ public class SpiderMinigame : MonoBehaviour
     System.Collections.IEnumerator WinGameCoroutine()
     {
         MinigameManager mm = GameManager.Instance.GetService<MinigameManager>();
+        mm.OnPlayerWinMinigame();
         yield return new WaitForSeconds(3);
-        mm.PlayerWinMinigame();
+        mm.PlayerWinExitMinigame();
         yield return new WaitUntil(() => mm.IsScreenTransitionFinished());
+        mm.OnMinigameDestroyedInvoke();
         Destroy(transform.parent.gameObject);
     }
     
     System.Collections.IEnumerator LoseGameCoroutine()
     {
         MinigameManager mm = GameManager.Instance.GetService<MinigameManager>();
+        mm.OnPlayerLoseMinigame();
         yield return new WaitForSeconds(3);
-        mm.PlayerLoseMinigame();
+        mm.PlayerLoseExitMinigame();
         yield return new WaitUntil(() => mm.IsScreenTransitionFinished());
         Debug.LogError("screen transition finished: "+ mm.IsScreenTransitionFinished());
+        mm.OnMinigameDestroyedInvoke();
         Destroy(transform.parent.gameObject);
     }
     void AdvanceTimers()

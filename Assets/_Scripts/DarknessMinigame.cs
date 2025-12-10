@@ -46,6 +46,11 @@ public class DarknessMinigame : MonoBehaviour
     public float minimumValidMatchStrikeValue;
     [SerializeField] private float currentMatchStrikeValue = 0;
 
+    [Header("Audio")]
+    public AudioSource matchStrikeSoundSource;
+    public AudioSource matchStrikeSuccessSoundSource;
+    public AudioClip[] matchStrikeSFX;
+    public AudioClip matchIgniteSFX;
     GameManager gm;
     MinigameManager mm;
     
@@ -113,9 +118,14 @@ public class DarknessMinigame : MonoBehaviour
         return currentNumberOfValidMatchStrikes >= minimumValidMatchStrikesToWin;
     }
     public float strikeSpeedMultiplier = 30f;
+
+    float _lastSavedMatchSoundPitch = 1f;
+    float _lastSavedMatchSoundVolume = 1f;
+    float _audioModifierValue = 1f;
     void ManageMatchAndStrikerInteraction()
     {
         float amountPlayerIsSwipingInValidDirection = Mathf.Clamp(GetDotProductOfMatchAndStrikerStrip(), 0f, 1f);
+        
         if (IsMatchTipIsTouchingStrikerStrip())
         {
             Debug.LogError("attempting to add striker value");
@@ -123,12 +133,41 @@ public class DarknessMinigame : MonoBehaviour
             //Debug.LogError((strikeSpeedMultiplier * Mathf.Abs(touchDelta.magnitude)) * Time.deltaTime);
             float swipeSpeedValue = swipeTimer != 0 ? Mathf.Abs(touchDelta.magnitude) / swipeTimer : 0;  //to avoid divide by zero error
             currentMatchStrikeValue += amountPlayerIsSwipingInValidDirection * (strikeSpeedMultiplier * swipeSpeedValue) * Time.deltaTime;
-
+            if(!matchStrikeSoundSource.isPlaying)
+            {
+                matchStrikeSoundSource.loop = true;
+                _lastSavedMatchSoundPitch = UnityEngine.Random.Range(0.3f, 0.4f);
+                _lastSavedMatchSoundVolume = UnityEngine.Random.Range(0.4f, 0.6f);
+                matchStrikeSoundSource.pitch = _lastSavedMatchSoundPitch;
+                matchStrikeSoundSource.volume = _lastSavedMatchSoundVolume;
+                _audioModifierValue = (Mathf.InverseLerp(0, minimumValidMatchStrikeValue, currentMatchStrikeValue) + Mathf.Clamp(amountPlayerIsSwipingInValidDirection, 0f, 1f))/2f;
+                matchStrikeSoundSource.clip = matchStrikeSFX[0];
+                matchStrikeSoundSource.Play();
+            }
+            else if((IsPlayerTouchingMatchStick() || isTouchingMatch) && Input.GetTouch(0).phase == TouchPhase.Moved)
+            {
+                _audioModifierValue = (Mathf.InverseLerp(0, minimumValidMatchStrikeValue, currentMatchStrikeValue) + Mathf.Clamp(amountPlayerIsSwipingInValidDirection, 0f, 1f))/2f;
+                matchStrikeSoundSource.pitch = Mathf.LerpUnclamped(_lastSavedMatchSoundPitch, 1.0f, _audioModifierValue);
+                matchStrikeSoundSource.volume = Mathf.LerpUnclamped(_lastSavedMatchSoundVolume, 1.0f, _audioModifierValue);
+            }
+            else
+            {
+                matchStrikeSoundSource.loop = false;
+                matchStrikeSoundSource.Stop();
+            }
         }
         else if (isStriking && !IsMatchTipIsTouchingStrikerStrip() && isTouchingMatch)
         {
             isStriking = false;
+            
+            matchStrikeSoundSource.loop = false; //disables match strike sounds if not striking
+            matchStrikeSoundSource.Stop();
+            
             Debug.LogError("finished strike attempt. checking if player striked correctly");
+            matchStrikeSuccessSoundSource.clip = matchStrikeSFX[1];
+            matchStrikeSuccessSoundSource.pitch = Mathf.LerpUnclamped(_lastSavedMatchSoundPitch, 1.0f, _audioModifierValue);
+            matchStrikeSuccessSoundSource.volume = Mathf.LerpUnclamped(_lastSavedMatchSoundVolume, 1.0f, _audioModifierValue);
+            matchStrikeSuccessSoundSource.Play();
             if (currentMatchStrikeValue > minimumValidMatchStrikeValue)
             {
                 currentNumberOfValidMatchStrikes++;
@@ -297,6 +336,10 @@ public class DarknessMinigame : MonoBehaviour
     {
         minigameEndStateDebounce = true;
         playerHandMatchFlameImage.enabled = true;
+        matchStrikeSuccessSoundSource.clip = matchIgniteSFX;
+        matchStrikeSuccessSoundSource.pitch = Mathf.LerpUnclamped(_lastSavedMatchSoundPitch, 1.0f, _audioModifierValue);
+        matchStrikeSuccessSoundSource.volume = Mathf.LerpUnclamped(_lastSavedMatchSoundVolume, 1.0f, _audioModifierValue);
+        matchStrikeSuccessSoundSource.Play();
         Debug.LogWarning("player won");
         minigameEndSequence ??= StartCoroutine(WinGameCoroutine());
     }
@@ -309,18 +352,22 @@ public class DarknessMinigame : MonoBehaviour
     System.Collections.IEnumerator WinGameCoroutine()
     {
         MinigameManager mm = GameManager.Instance.GetService<MinigameManager>();
+        mm.OnPlayerWinMinigame();
         yield return new WaitForSeconds(3);
-        mm.PlayerWinMinigame();
+        mm.PlayerWinExitMinigame();
         yield return new WaitUntil(() => mm.IsScreenTransitionFinished());
+        mm.OnMinigameDestroyedInvoke();
         Destroy(transform.parent.gameObject);
     }
     
     System.Collections.IEnumerator LoseGameCoroutine()
     {
         MinigameManager mm = GameManager.Instance.GetService<MinigameManager>();
+        mm.OnPlayerLoseMinigame();
         yield return new WaitForSeconds(3);
-        mm.PlayerLoseMinigame();
+        mm.PlayerLoseExitMinigame();
         yield return new WaitUntil(() => mm.IsScreenTransitionFinished());
+        mm.OnMinigameDestroyedInvoke();
         Destroy(transform.parent.gameObject);
     }
     void AdvanceTimers()
